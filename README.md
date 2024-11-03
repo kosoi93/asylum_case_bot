@@ -713,3 +713,120 @@ sudo systemctl start telegram_case_bot.service
 Заключение
 
 Автоматизация с помощью CI/CD и настройка стабильного серверного окружения позволяют эффективно управлять проектом Telegram Case Bot и обеспечивать его непрерывную работу.
+
+12.4 Локальное тестирование и разработка
+
+Для удобства разработки и тестирования Telegram Case Bot локально рекомендуется следовать приведенным ниже инструкциям по настройке окружения, установке зависимостей и созданию файлов с тестовыми данными.
+
+1. Пример настройки окружения
+
+Чтобы настроить окружение для локального тестирования и разработки, выполните следующие шаги:
+
+Шаг 1. Установка Python и виртуального окружения
+
+Убедитесь, что на вашей системе установлен Python 3.10. Затем создайте и активируйте виртуальное окружение для управления зависимостями проекта.
+
+# Установите Python 3.10, если еще не установлен
+# В Linux (например, Ubuntu):
+sudo apt update
+sudo apt install python3.10 python3.10-venv python3.10-dev
+
+# Создание и активация виртуального окружения
+cd path/to/telegram_case_bot
+python3.10 -m venv venv
+source venv/bin/activate  # для Linux/macOS
+# или venv\Scripts\activate  # для Windows
+
+Шаг 2. Установка зависимостей
+
+Установите зависимости, указанные в requirements.txt, чтобы ваш проект мог корректно работать.
+
+pip install -r requirements.txt
+
+Шаг 3. Настройка переменных окружения
+
+Для безопасного хранения конфиденциальных данных создайте файл .env в корневой директории проекта и добавьте туда следующие ключи API и параметры конфигурации:
+
+TELEGRAM_BOT_TOKEN="ваш_токен_бота"
+OPENAI_API_KEY="ваш_ключ_API_OpenAI"
+ENCRYPTION_KEY="ваш_ключ_шифрования"
+LOGGING_LEVEL="DEBUG"
+
+Используйте библиотеку python-dotenv для загрузки этих переменных в код. Если она еще не установлена, добавьте ее в зависимости:
+
+pip install python-dotenv
+
+Пример использования в коде (например, в config.py):
+
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
+LOGGING_LEVEL = os.getenv("LOGGING_LEVEL", "INFO")
+
+2. Файлы с примерами запросов и ответов
+
+Для локального тестирования без использования реального API OpenAI создайте набор JSON-файлов с тестовыми данными, моделирующими запросы и ответы API. Эти файлы позволят тестировать функциональность бота, не обращаясь к OpenAI.
+
+Шаг 1. Создание тестовых данных
+
+Создайте папку tests/mock_data и добавьте JSON-файлы с примерами запросов и ответов. Например:
+
+	•	tests/mock_data/sample_request.json:
+
+{
+    "prompt": "Анализ политического кейса...",
+    "model": "text-davinci-003",
+    "max_tokens": 500,
+    "temperature": 0.7
+}
+
+
+	•	tests/mock_data/sample_response.json:
+
+{
+    "choices": [
+        {
+            "text": "\nРезультаты анализа: Обнаружены ключевые несостыковки...",
+            "finish_reason": "length"
+        }
+    ],
+    "usage": {
+        "prompt_tokens": 10,
+        "completion_tokens": 500,
+        "total_tokens": 510
+    }
+}
+
+
+
+Шаг 2. Имитация ответов API
+
+Добавьте функцию-имитатор, которая будет считывать тестовые данные и возвращать их вместо реального ответа OpenAI API:
+
+import json
+
+def mock_openai_request(request_data):
+    """Загружает и возвращает предварительно сохраненный ответ из JSON файла для тестирования."""
+    with open("tests/mock_data/sample_response.json", "r", encoding="utf-8") as file:
+        mock_response = json.load(file)
+    return mock_response
+
+Пример использования mock-функции в тесте:
+
+def test_openai_integration():
+    # Имитация запроса
+    with open("tests/mock_data/sample_request.json", "r", encoding="utf-8") as file:
+        request_data = json.load(file)
+    
+    response = mock_openai_request(request_data)
+    
+    assert "choices" in response, "Ожидаемая структура ответа API"
+    assert response["choices"][0]["text"].startswith("\nРезультаты анализа"), "Проверка текста ответа"
+
+Заключение
+
+Эти инструкции по локальному тестированию и созданию тестовых данных позволят разработчикам эффективно тестировать функциональность бота без необходимости в реальных запросах к OpenAI, что упрощает отладку и ускоряет процесс разработки.
