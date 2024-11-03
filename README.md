@@ -505,3 +505,115 @@ OpenAI возвращает JSON-объект, содержащий нескол
 
 Примеры API-запросов и шаблонов сообщений помогают унифицировать ответы и упростить интеграцию. Это также гарантирует, что пользователи получают точные и понятные уведомления, а разработчики быстрее ориентируются в системе.
 
+12.3 Примеры для деплоя и CI/CD
+
+Telegram Case Bot требует надежного CI/CD процесса для автоматического развертывания, тестирования и мониторинга. Пример настройки CI/CD и рекомендации по требованиям для сервера включают:
+
+Пример CI/CD с использованием GitHub Actions
+
+Ниже представлена базовая конфигурация для GitHub Actions, выполняющая автоматическое тестирование, проверку безопасности, а также деплой при обновлении основного репозитория.
+
+	1.	Создайте файл .github/workflows/deploy.yml с содержимым:
+
+name: Telegram Case Bot CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Tests
+      run: |
+        pytest --maxfail=1 --disable-warnings
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Deploy to Server
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        ssh user@yourserver 'cd /path/to/telegram_case_bot && git pull && systemctl restart telegram_case_bot.service'
+
+	•	Объяснение:
+	•	Test job: Устанавливает зависимости и запускает pytest, чтобы убедиться, что все тесты успешно проходят.
+	•	Deploy job: Выполняется после успешного прохождения тестов. Подключается к серверу по SSH, обновляет репозиторий и перезапускает сервис Telegram Bot.
+
+Минимальные требования для сервера
+
+Для успешного запуска и поддержания Telegram Case Bot на сервере рекомендуется:
+
+	•	ОС: Ubuntu 20.04 или выше.
+	•	Python: Версия 3.10.
+	•	RAM: Не менее 2 GB, рекомендуется 4 GB для стабильной работы и резервирования под нагрузкой.
+	•	SSL/TLS: Необходим для защиты данных при взаимодействии с Telegram API. Настроить можно через бесплатный сертификат от Let’s Encrypt или использовать прокси-сервер с поддержкой HTTPS.
+	•	Хранилище: SSD, не менее 10 GB, с достаточным пространством для временных данных и логов.
+	•	Сервис для управления ботом: Используйте systemd или Docker для управления процессом и автоматического перезапуска в случае сбоев.
+
+Настройка сервиса для автоматического управления ботом
+
+Пример systemd сервиса для автоматического запуска Telegram Case Bot:
+
+	1.	Создайте файл сервиса: /etc/systemd/system/telegram_case_bot.service
+
+[Unit]
+Description=Telegram Case Bot
+After=network.target
+
+[Service]
+User=youruser
+WorkingDirectory=/path/to/telegram_case_bot
+ExecStart=/usr/bin/python3 /path/to/telegram_case_bot/bot.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
+
+	2.	Активируйте и запустите сервис:
+
+sudo systemctl daemon-reload
+sudo systemctl enable telegram_case_bot.service
+sudo systemctl start telegram_case_bot.service
+
+
+	3.	Проверка статуса: Командой sudo systemctl status telegram_case_bot.service можно отслеживать состояние работы бота.
+
+Заключение
+
+Автоматизация с помощью CI/CD и настройка стабильного серверного окружения позволяют эффективно управлять проектом Telegram Case Bot и обеспечивать его непрерывную работу.
